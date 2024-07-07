@@ -1,37 +1,41 @@
 <?php
 session_start();
+require_once 'functions.php'; // Adjust the path based on your file structure
 
-// Example login logic (replace with your actual authentication)
-
-$adminUsername = 'admin';
-$adminPassword = 'adminpass';
-
-$customerUsername = 'customer';
-$customerPassword = 'customerpass';
-
-$login_error = ''; // Initialize login error message
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $username = $_POST['username'];
     $password = $_POST['password'];
 
-    if (($username === $adminUsername && $password === $adminPassword) || ($username === $customerUsername && $password === $customerPassword)) {
-        // Correct credentials
-        $_SESSION['username'] = $username;
-        $_SESSION['role'] = ($username === $adminUsername) ? 'admin' : 'customer';
+    // Admin credentials (replace with your actual admin username and password)
+    $admin_username = "admin";
+    $admin_password = "adminpass";
 
-        if ($_SESSION['role'] === 'admin') {
-            header("Location: Admin/index.php");
-        } elseif ($_SESSION['role'] === 'customer') {
-            header("Location: User/profile_customer.php");
-        }
+    // Check if admin login
+    if ($username === $admin_username && $password === $admin_password) {
+        $_SESSION['user_type'] = 'admin';
+        header("Location: Admin/index.php");
+        exit;
+    }
+
+    // Check customer login using database credentials
+    $user = getUserByUsernameAndPassword($username, $password);
+
+    if ($user) {
+        // Customer found, set session variables and redirect to profile page
+        $_SESSION['user_type'] = 'customer';
+        $_SESSION['user'] = $user;
+        header("Location: User/profile_customer.php");
         exit;
     } else {
-        // Incorrect credentials
-        $login_error = "Invalid username or password."; // Assign error message
+        // User not found, set error message and redirect back to login page
+        $_SESSION['login_error'] = "Invalid username or password.";
+        header("Location: login.php");
+        exit;
     }
 }
 ?>
+
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -100,9 +104,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h3 class="login-box-msg">Login Here</h3>
 
             
-            <?php if ($login_error != ''): ?>
-            <p class="text-danger"><?= $login_error ?></p>
-            <?php endif; ?>
 
             <form action="login.php" method="post">
                 <div class="input-group mb-3">

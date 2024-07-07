@@ -1,28 +1,23 @@
 <?php
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
+session_start();
+require_once '../functions.php'; // Include your functions for database access
 
-require '../functions.php';
-
-if (!isset($_GET['id'])) {
-    header("Location: index.php");
+// Check if user is logged in as customer
+if (!isset($_SESSION['user']) || $_SESSION['user_type'] !== 'customer') {
+    header("Location: login.php");
     exit;
 }
 
-$movie_id = $_GET['id'];
-$movie = getVideoById($movie_id);
-
-if (!$movie) {
-    header("Location: index.php");
-    exit;
-}
+// Get user details from session
+$user = $_SESSION['user'];
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Rent Confirmation</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Profile Details</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <style>
@@ -30,52 +25,54 @@ if (!$movie) {
             background-image: url('bg.jpg');
             background-size: cover;
             background-position: center;
-            height: 100%;
+            min-height: 100vh; /* Ensure full viewport height */
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
         }
+
         .navbar {
             background-color: rgba(0, 0, 0, 1);
         }
+
         .navbar-brand {
             font-weight: bold;
             font-size: 24px;
             color: #fff !important;
         }
+
         .nav-link {
             color: #fff !important;
         }
-        .confirmation-container {
+
+        .container {
+            flex: 1; /* Grow to fill remaining vertical space */
             margin-top: 20px;
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            margin-bottom: 20px; /* Add margin to separate content from footer */
         }
+
         .card {
             background-color: rgba(0, 0, 0, 0.7);
             color: #fff;
             border: none;
             border-radius: 10px;
             padding: 20px;
-            max-width: 400px;
+            margin-bottom: 20px;
+            width: 100%; /* Ensure cards take full width */
+            max-width: 600px; /* Adjust max-width as needed */
         }
+
+        .card-body {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
         .footer {
             background-color: rgba(0, 0, 0, 1);
             color: #fff;
             padding: 20px 0;
             text-align: center;
-            position: relative;
-            bottom: 0;
             width: 100%;
-        }
-        .btn-primary, .btn-danger, .btn-warning, .btn-success {
-            margin-right: 10px;
-        }
-        .card-img-top {
-            max-height: 300px;
-            object-fit: cover;
         }
     </style>
 </head>
@@ -104,18 +101,19 @@ if (!$movie) {
     </div>
 </nav>
 
-    <div class="confirmation-container container">
-        <div class="card">
-            <img src="<?php echo $movie['image']; ?>" class="card-img-top" alt="...">
+    <div class="container">
+        <div class="card mx-auto">
             <div class="card-body">
-                <h5 class="card-title"><?php echo $movie['title']; ?></h5>
-                <p class="card-text">Directed by: <?php echo $movie['director']; ?></p>
-                <p class="card-text">Release Year: <?php echo $movie['release_year']; ?></p>
-                <p class="card-text">Price: ₱<?php echo $movie['price']; ?></p><!-- Added price -->
-                <div class="alert alert-success" role="alert">
-                    You have successfully rented the movie.
-                </div>
-                <a href="index.php" class="btn btn-primary">Back to Home</a>
+                <h3 class="card-title">Customer Information</h3>
+                <p><strong>Name:</strong> <?php echo htmlspecialchars($user['name']); ?></p>
+                <p><strong>Username:</strong> <?php echo htmlspecialchars($user['username']); ?></p>
+                <p><strong>Gender:</strong> <?php echo htmlspecialchars($user['gender']); ?></p>
+                <p><strong>Age:</strong> <?php echo htmlspecialchars($user['age']); ?></p>
+                <p><strong>Contact Number:</strong> <?php echo htmlspecialchars($user['contact_number']); ?></p>
+                <p><strong>Address:</strong> <?php echo htmlspecialchars($user['address']); ?></p>
+                <p><strong>Postal Code:</strong> <?php echo htmlspecialchars($user['postal_code']); ?></p>
+                <a href="edit_profile.php" class="btn btn-primary">Edit Profile</a>
+
             </div>
         </div>
     </div>

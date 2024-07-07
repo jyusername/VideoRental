@@ -16,6 +16,7 @@ if (!isset($_SESSION['videos'])) {
 }
 
 // Add a video with copies parameter
+// Add a video with copies parameter
 function addVideo($title, $director, $release_year, $image, $price, $genre, $format, $copies) {
     global $conn;
 
@@ -28,7 +29,7 @@ function addVideo($title, $director, $release_year, $image, $price, $genre, $for
     return $result;
 }
 
-// Get all videos from the database
+/// Get all videos from the database
 function getVideos() {
     global $conn; // Access the global database connection
 
@@ -101,17 +102,14 @@ function updateVideo($id, $title, $director, $release_year, $image, $price, $gen
 function rentVideo($id, $rental_copies = 1) {
     global $conn; // Access the global database connection
 
-    // Get current copies and rented status
     $video = getVideoById($id);
 
     if ($video && $video['copies'] >= $rental_copies) {
-        // Update copies and rented status
         $new_copies = $video['copies'] - $rental_copies;
         $sql = "UPDATE videos SET copies = ? WHERE id = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("ii", $new_copies, $id);
 
-        // Execute statement
         if ($stmt->execute()) {
             return true;
         } else {
@@ -123,19 +121,16 @@ function rentVideo($id, $rental_copies = 1) {
 }
 
 
-// Update video
 // Update video in the database
 function editVideo($id, $title, $director, $release_year, $image, $price, $genre, $format, $copies) {
     global $conn; // Access the global database connection
 
-    // Prepare SQL statement
     $sql = "UPDATE videos 
             SET title = ?, director = ?, release_year = ?, image = ?, price = ?, genre = ?, format = ?, copies = ?
             WHERE id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ssissssii", $title, $director, $release_year, $image, $price, $genre, $format, $copies, $id);
     
-    // Execute statement
     if ($stmt->execute()) {
         return true;
     } else {
@@ -147,16 +142,172 @@ function editVideo($id, $title, $director, $release_year, $image, $price, $genre
 function deleteVideo($id) {
     global $conn; // Access the global database connection
 
-    // Prepare SQL statement
     $sql = "DELETE FROM videos WHERE id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $id);
     
-    // Execute statement
     if ($stmt->execute()) {
         return true;
     } else {
         return false;
     }
+}
+
+function generateReceipt($email, $rentalDetails) {
+    $subject = "Rental Receipt";
+    $message = "Thank you for your rental.\n\nDetails:\n";
+    foreach ($rentalDetails as $key => $value) {
+        $message .= ucfirst($key) . ": " . $value . "\n";
+    }
+
+    mail($email, $subject, $message);
+}
+
+
+
+// Validate registration inputs
+function validateRegistration($name, $username, $password, $gender, $age, $contact_number, $address, $postal_code) {
+    $errors = [];
+
+    // Name validation
+    if (empty($name)) {
+        $errors['name'] = "Name is required.";
+    }
+
+    // Username validation
+    if (empty($username)) {
+        $errors['username'] = "Username is required.";
+    } elseif (!preg_match("/^[a-zA-Z0-9_\-]+$/", $username)) {
+        $errors['username'] = "Username can only contain letters, numbers, underscores, and dashes.";
+    }
+
+    // Password validation
+    if (empty($password)) {
+        $errors['password'] = "Password is required.";
+    } elseif (strlen($password) < 6) {
+        $errors['password'] = "Password must be at least 6 characters.";
+    }
+
+    // Gender validation
+    if (!in_array($gender, ['male', 'female'])) {
+        $errors['gender'] = "Gender must be Male or Female.";
+    }
+
+    // Age validation
+    if ($age < 12 || $age > 98) {
+        $errors['age'] = "Age must be between 12 and 98.";
+    }
+
+    // Contact number validation
+    if (!preg_match("/^[0-9]{11}$/", $contact_number)) {
+        $errors['contact_number'] = "Contact number must be an 11-digit number.";
+    }
+
+    // Postal code validation
+    if (!preg_match("/^[0-9]{4}$/", $postal_code)) {
+        $errors['postal_code'] = "Postal code must be a 4-digit number.";
+    }
+
+    // Address validation
+    if (empty($address)) {
+        $errors['address'] = "Address is required.";
+    }
+
+    return $errors;
+}
+
+// Register user into database
+function registerUser($name, $username, $password, $gender, $age, $contact_number, $address, $postal_code) {
+    // Establish database connection
+    $conn = new mysqli('localhost', 'root', '', 'video_rental_db');
+
+    // Check connection
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+
+    // Prepare SQL statement
+    $stmt = $conn->prepare("INSERT INTO customers (name, username, password, gender, age, contact_number, address, postal_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+
+    // Bind parameters
+    $stmt->bind_param("ssssisss", $name, $username, $password, $gender, $age, $contact_number, $address, $postal_code);
+
+    // Execute statement
+    $success = $stmt->execute();
+
+    // Close statement and connection
+    $stmt->close();
+    $conn->close();
+
+    return $success;
+}
+
+function getUserByUsernameAndPassword($username, $password) {
+    // Establish database connection
+    $conn = new mysqli('localhost', 'root', '', 'video_rental_db');
+
+    // Check connection
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+
+    // Prepare SQL statement
+    $stmt = $conn->prepare("SELECT * FROM customers WHERE username=? AND password=?");
+
+    // Bind parameters
+    $stmt->bind_param("ss", $username, $password);
+
+    // Execute statement
+    $stmt->execute();
+
+    // Get result
+    $result = $stmt->get_result();
+
+    // Check if user exists
+    if ($result->num_rows > 0) {
+        // Fetch user data
+        $user = $result->fetch_assoc();
+        $stmt->close();
+        $conn->close();
+        return $user;
+    } else {
+        $stmt->close();
+        $conn->close();
+        return null;
+    }
+}
+
+// Get user by ID
+function getUserById($id) {
+    global $conn;
+
+    $stmt = $conn->prepare("SELECT * FROM customers WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        return $result->fetch_assoc();
+    } else {
+        return null;
+    }
+}
+
+function updateUserProfile($id, $name, $username, $gender, $age, $contact_number, $address, $postal_code) {
+    $conn = new mysqli('localhost', 'root', '', 'video_rental_db');
+
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+
+    $stmt = $conn->prepare("UPDATE customers SET name=?, username=?, gender=?, age=?, contact_number=?, address=?, postal_code=? WHERE id=?");
+    $stmt->bind_param("sssisssi", $name, $username, $gender, $age, $contact_number, $address, $postal_code, $id);
+
+    $result = $stmt->execute();
+
+    $stmt->close();
+    $conn->close();
+
+    return $result;
 }
 ?>
